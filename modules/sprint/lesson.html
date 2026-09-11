@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>短跑课时表</title>
+    <link rel="stylesheet" href="../../css/app.css" />
+  </head>
+  <body data-page="lesson">
+    <header class="app-header">
+      <div>
+        <h1 id="page-title">课时表</h1>
+        <div class="sub">热身 → 专项 → 拉伸 → 总结</div>
+      </div>
+      <div class="nav-links no-print">
+        <a class="btn" href="index.html">返回总表</a>
+        <a class="btn" id="switch-role" href="#">切换版本</a>
+        <button type="button" class="btn" id="btn-save">保存记录</button>
+        <button type="button" class="btn btn-danger" id="btn-clear">清空本课</button>
+        <button type="button" class="btn btn-primary" id="btn-print">打印</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="toolbar no-print" id="hint-bar"></div>
+      <div id="lesson-root"></div>
+    </main>
+
+    <script src="data.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/app.js"></script>
+  </body>
+</html>
