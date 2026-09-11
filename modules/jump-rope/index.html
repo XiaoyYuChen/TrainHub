@@ -3,27 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>跳绳 · 即将开放</title>
+    <title>心雨少儿体能-体测方向 · 跳绳总表</title>
     <link rel="stylesheet" href="../../css/app.css" />
   </head>
-  <body>
+  <body data-page="module-index">
     <header class="app-header">
       <div>
-        <h1>跳绳</h1>
-        <div class="sub">即将开放</div>
+        <h1>心雨少儿体能-体测方向 · 跳绳总表</h1>
+        <div class="sub">12课时训练计划 · 适用 2–6年级 · 单课 45分钟 · 体测方向：一分钟跳绳</div>
       </div>
-      <div class="nav-links">
+      <div class="nav-links no-print">
         <a class="btn" href="../../index.html">返回首页</a>
+        <button type="button" class="btn btn-primary" id="btn-print">打印总表</button>
+        <button type="button" class="btn btn-coach" id="btn-image">保存图片</button>
       </div>
     </header>
+
     <main class="container">
-      <div class="panel placeholder-page">
-        <h2>模块即将开放</h2>
-        <p class="muted">
-          后续将按与「短跑」相同的结构扩展：总表 + 学员版 / 教练员版。
+      <div class="panel no-print">
+        <p class="note" style="margin: 0">
+          每课分<strong>学员版</strong>（训练项 + 掌握情况，可填写保存）与<strong>教练员版</strong>（教案：核心点、常见错误与纠错）。点击对应按钮进入。打印 / 保存图片仅输出下方总表内容。
         </p>
-        <p><a class="btn btn-primary" href="../sprint/index.html">先去短跑模块</a></p>
+      </div>
+
+      <div class="table-wrap" id="print-area">
+        <table class="plan-table">
+          <thead>
+            <tr>
+              <th style="width: 4em">课次</th>
+              <th>主题</th>
+              <th>重点动作</th>
+              <th>目标</th>
+              <th class="no-print" style="width: 15em; white-space: nowrap">进入</th>
+            </tr>
+          </thead>
+          <tbody id="lesson-tbody"></tbody>
+        </table>
       </div>
     </main>
+
+    <script src="data.js"></script>
+    <script src="../../js/export-image.js?v=7"></script>
+    <script src="../../js/app.js?v=9"></script>
   </body>
 </html>

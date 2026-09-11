@@ -1,10 +1,120 @@
 /**
- * 短跑单课页渲染：role=student | coach
+ * 训练模块单课页渲染：role=student | coach
+ * 通过 TRAIN_MODULE / 各模块 data.js 适配短跑、长跑等
  */
 (function () {
   function qs(name) {
     const u = new URL(window.location.href);
     return u.searchParams.get(name);
+  }
+
+  function getModuleContext() {
+    var mod = window.TRAIN_MODULE || {};
+    var id = mod.id || "sprint";
+    var label = mod.label || mod.name || "短跑";
+    var shared = mod.shared;
+    var lessons = mod.lessons;
+    var getLesson = mod.getLesson;
+    var storage = mod.storage;
+    var lessonCount = mod.lessonCount;
+
+    // 兼容只声明 id/label 的模块（如长跑早期写法）
+    if (!shared || !lessons) {
+      if (id === "endurance") {
+        shared = shared || window.ENDURANCE_SHARED;
+        lessons = lessons || window.ENDURANCE_LESSONS;
+        getLesson = getLesson || window.getEnduranceLesson;
+        storage = storage || window.EnduranceStorage;
+      } else if (id === "jump-rope") {
+        shared = shared || window.JUMP_ROPE_SHARED;
+        lessons = lessons || window.JUMP_ROPE_LESSONS;
+        getLesson = getLesson || window.getJumpRopeLesson;
+        storage = storage || window.JumpRopeStorage;
+      } else if (id === "fitness") {
+        shared = shared || window.FITNESS_SHARED;
+        lessons = lessons || window.FITNESS_LESSONS;
+        getLesson = getLesson || window.getFitnessLesson;
+        storage = storage || window.FitnessStorage;
+      } else if (id === "core") {
+        shared = shared || window.CORE_SHARED;
+        lessons = lessons || window.CORE_LESSONS;
+        getLesson = getLesson || window.getCoreLesson;
+        storage = storage || window.CoreStorage;
+      } else {
+        shared = shared || window.SPRINT_SHARED;
+        lessons = lessons || window.SPRINT_LESSONS;
+        getLesson = getLesson || window.getSprintLesson;
+        storage = storage || window.SprintStorage;
+        id = "sprint";
+        label = label || "短跑";
+      }
+    }
+
+    if (!storage && window.createLessonStorage) {
+      storage = window.createLessonStorage(id + "-lesson-");
+    }
+    if (!storage) {
+      storage = window.SprintStorage;
+    }
+
+    return {
+      id: id,
+      label: label,
+      lessonCount: lessonCount || (lessons && lessons.length) || 12,
+      shared: shared,
+      lessons: lessons,
+      getLesson: getLesson,
+      storage: storage
+    };
+  }
+
+  function getFlowMinutes(lesson, shared) {
+    var fm = (lesson && lesson.flowMinutes) || {};
+    var total = (lesson && lesson.duration) || (shared && shared.duration) || 45;
+    var warmup =
+      fm.warmup != null
+        ? fm.warmup
+        : (shared && shared.warmup && shared.warmup.duration) || 10;
+    var stretch =
+      fm.stretch != null
+        ? fm.stretch
+        : (shared && shared.stretch && shared.stretch.duration) || 5;
+    var summary = fm.summary != null ? fm.summary : 2;
+    var special =
+      fm.special != null
+        ? fm.special
+        : Math.max(0, total - warmup - stretch - summary);
+    return {
+      warmup: warmup,
+      special: special,
+      stretch: stretch,
+      summary: summary,
+      total: total
+    };
+  }
+
+  function pad2(n) {
+    return (n < 10 ? "0" : "") + n;
+  }
+
+  function addMinutesToTime(timeStr, minutes) {
+    var parts = String(timeStr || "16:00").split(":");
+    var h = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    if (isNaN(h)) h = 16;
+    if (isNaN(m)) m = 0;
+    var total = h * 60 + m + (minutes || 0);
+    total = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+    return pad2(Math.floor(total / 60)) + ":" + pad2(total % 60);
+  }
+
+  function defaultTimeEnd(cfg, lesson, shared) {
+    var flow = getFlowMinutes(lesson, shared);
+    var start = (cfg && cfg.defaultTimeStart) || "16:00";
+    if (flow.total === 45 && cfg && cfg.defaultTimeEnd) {
+      return cfg.defaultTimeEnd;
+    }
+    return addMinutesToTime(start, flow.total);
   }
 
   function el(tag, attrs, children) {
@@ -46,17 +156,104 @@
     return ul;
   }
 
-  function renderStudent(lesson, shared, root) {
+  function displayList(items, ordered) {
+    const ul = el("ul", {
+      className: ordered ? "tag-list ordered" : "tag-list"
+    });
+    items.forEach(function (item) {
+      ul.appendChild(el("li", { text: item }));
+    });
+    return ul;
+  }
+
+  function todayISODate() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function getConfig() {
+    return window.getSiteConfig ? window.getSiteConfig() : {};
+  }
+
+  function renderCoachQr(coach) {
+    var box = el("div", { className: "coach-card", id: "coach-qr-box" });
+    if (!coach) {
+      box.appendChild(
+        el("div", { className: "note", text: "暂无教练配置" })
+      );
+      return box;
+    }
+
+    if (coach.qr || coach.qrDataKey) {
+      var qrSrc = window.resolveCoachQrSrc
+        ? window.resolveCoachQrSrc(coach)
+        : window.resolveSiteAsset
+          ? window.resolveSiteAsset(coach.qr)
+          : "../../" + (coach.qr || "");
+      box.appendChild(
+        el("img", {
+          className: "coach-qr-img",
+          src: qrSrc,
+          alt: (coach.name || "教练") + "微信二维码",
+          "data-coach-id": coach.id || ""
+        })
+      );
+    }
+
+    box.appendChild(
+      el("div", { className: "coach-card-name", text: coach.name || "教练" })
+    );
+    return box;
+  }
+
+  function updateCoachQrDisplay(coachId) {
+    var host = document.getElementById("coach-qr-host");
+    if (!host) return;
+    host.innerHTML = "";
+    var coach =
+      (window.getCoachById && window.getCoachById(coachId)) ||
+      (window.getDefaultCoach && window.getDefaultCoach());
+    host.appendChild(renderCoachQr(coach));
+  }
+
+  function renderStudent(lesson, shared, root, mod) {
+    mod = mod || getModuleContext();
     document.body.classList.add("role-student");
     document.title =
-      "学员版 · 第" + lesson.id + "课 " + lesson.title + " · 短跑入门";
+      "心雨少儿体能-体测方向 · 学员版 · 第" +
+      lesson.id +
+      "课 " +
+      lesson.title;
 
-    const saved = window.SprintStorage.load(lesson.id) || {};
+    const storage = mod.storage || window.SprintStorage;
+    const saved = (storage && storage.load(lesson.id)) || {};
+    const cfg = getConfig();
+    const flow = getFlowMinutes(lesson, shared);
+    const defaultCoach =
+      (window.getDefaultCoach && window.getDefaultCoach()) ||
+      (cfg.coaches && cfg.coaches[0]) ||
+      { id: "chen", name: "陈教练" };
+    const coaches = cfg.coaches || [defaultCoach];
+    const studentOptions = cfg.studentOptions || [];
+
+    var initialCoachId = saved.coachId || defaultCoach.id;
+    if (saved.coachName && window.getCoachByName) {
+      var byName = window.getCoachByName(saved.coachName);
+      if (byName) initialCoachId = byName.id;
+    }
+    if (!window.getCoachById || !window.getCoachById(initialCoachId)) {
+      initialCoachId = defaultCoach.id;
+    }
 
     const sheet = el("div", { className: "sheet", id: "print-area" });
 
     sheet.appendChild(
-      el("h2", { className: "sheet-title", text: "短跑入门 · 学员训练表" })
+      el("h2", {
+        className: "sheet-title",
+        text: "心雨少儿体能-体测方向 · 学员训练表"
+      })
     );
     sheet.appendChild(
       el("div", {
@@ -67,66 +264,200 @@
           "课 · " +
           lesson.title +
           " · " +
-          shared.duration +
-          "分钟 · " +
-          shared.audience
+          flow.total +
+          "分钟"
       })
     );
 
-    const meta = el("div", { className: "meta-grid" });
-    [
-      { key: "studentName", label: "学员名称", type: "text" },
-      { key: "classTime", label: "上课时间", type: "datetime-local" },
-      { key: "coachName", label: "指导教练", type: "text" }
-    ].forEach(function (f) {
-      const input = el("input", {
-        type: f.type,
-        id: f.key,
-        name: f.key,
-        value: saved[f.key] || ""
-      });
-      meta.appendChild(
-        el("div", { className: "field" }, [
-          el("label", { for: f.key, text: f.label }),
-          input
-        ])
-      );
-    });
-    sheet.appendChild(meta);
+    // 左：学员 + 日期/时间（上下）；右：指导教练
+    const headerRow = el("div", { className: "sheet-header-row" });
+    const leftCol = el("div", { className: "sheet-header-left" });
 
-    // 热身
+    const studentInput = el("input", {
+      type: "text",
+      id: "studentName",
+      name: "studentName",
+      placeholder: "输入或从列表选择",
+      autocomplete: "off",
+      value: saved.studentName || ""
+    });
+    const studentToggle = el("button", {
+      type: "button",
+      className: "student-picker-toggle",
+      "aria-label": "打开学员备选列表",
+      text: "▾"
+    });
+    const studentList = el("ul", {
+      className: "student-picker-list",
+      id: "student-picker-list",
+      hidden: "hidden"
+    });
+    studentOptions.forEach(function (name) {
+      var item = el("li", {
+        className: "student-picker-item",
+        role: "option",
+        tabindex: "0",
+        text: name
+      });
+      item.addEventListener("click", function () {
+        studentInput.value = name;
+        studentList.setAttribute("hidden", "hidden");
+        studentPicker.classList.remove("is-open");
+        studentInput.focus();
+      });
+      studentList.appendChild(item);
+    });
+
+    const studentPicker = el("div", { className: "student-picker" }, [
+      studentInput,
+      studentToggle,
+      studentList
+    ]);
+
+    function openStudentList() {
+      // 每次打开都展示完整备选，不按输入过滤
+      studentList.removeAttribute("hidden");
+      studentPicker.classList.add("is-open");
+    }
+
+    function closeStudentList() {
+      studentList.setAttribute("hidden", "hidden");
+      studentPicker.classList.remove("is-open");
+    }
+
+    studentToggle.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (studentList.hasAttribute("hidden")) openStudentList();
+      else closeStudentList();
+    });
+    studentInput.addEventListener("focus", function () {
+      openStudentList();
+    });
+    studentInput.addEventListener("click", function () {
+      openStudentList();
+    });
+    document.addEventListener("click", function (e) {
+      if (!studentPicker.contains(e.target)) closeStudentList();
+    });
+
+    leftCol.appendChild(
+      el("div", { className: "field" }, [
+        el("label", { for: "studentName", text: "学员名称" }),
+        studentPicker
+      ])
+    );
+
+    const datetimeBlock = el("div", { className: "datetime-stack" });
+    datetimeBlock.appendChild(
+      el("div", { className: "field" }, [
+        el("label", { for: "classDate", text: "上课日期" }),
+        el("input", {
+          type: "date",
+          id: "classDate",
+          name: "classDate",
+          value: saved.classDate || todayISODate()
+        })
+      ])
+    );
+
+    const timeWrap = el("div", { className: "time-range-fields" }, [
+      el("input", {
+        type: "time",
+        id: "timeStart",
+        name: "timeStart",
+        value: saved.timeStart || cfg.defaultTimeStart || "16:00"
+      }),
+      el("span", { className: "sep", text: "至" }),
+      el("input", {
+        type: "time",
+        id: "timeEnd",
+        name: "timeEnd",
+        value: saved.timeEnd || defaultTimeEnd(cfg, lesson, shared)
+      })
+    ]);
+    datetimeBlock.appendChild(
+      el("div", { className: "field" }, [
+        el("label", { for: "timeStart", text: "上课时间" }),
+        timeWrap
+      ])
+    );
+    leftCol.appendChild(datetimeBlock);
+    headerRow.appendChild(leftCol);
+
+    const coachSelect = el("select", {
+      id: "coachId",
+      name: "coachId"
+    });
+    coaches.forEach(function (c) {
+      var opt = el("option", { value: c.id, text: c.name });
+      if (c.id === initialCoachId) opt.selected = true;
+      coachSelect.appendChild(opt);
+    });
+    coachSelect.addEventListener("change", function () {
+      updateCoachQrDisplay(coachSelect.value);
+    });
+
+    const coachField = el("div", { className: "field field-coach sheet-header-right" });
+    coachField.appendChild(el("label", { for: "coachId", text: "指导教练" }));
+    coachField.appendChild(coachSelect);
+    const qrHost = el("div", { id: "coach-qr-host", className: "coach-qr-host" });
+    qrHost.appendChild(
+      renderCoachQr(
+        (window.getCoachById && window.getCoachById(initialCoachId)) ||
+          defaultCoach
+      )
+    );
+    coachField.appendChild(qrHost);
+    headerRow.appendChild(coachField);
+    sheet.appendChild(headerRow);
+
+    // 热身：仅展示
     const warm = el("div", { className: "section" });
     warm.appendChild(
       el("div", {
         className: "section-head",
-        html: "一、热身（" + shared.warmup.duration + "分钟）"
+        html: "一、热身（" + flow.warmup + "分钟）"
       })
     );
     const warmBody = el("div", { className: "section-body" });
     warmBody.appendChild(el("div", { className: "sub-label", text: "活动关节" }));
-    warmBody.appendChild(
-      checklist(shared.warmup.joints, "joint", saved.checks && saved.checks.joints)
-    );
+    warmBody.appendChild(displayList(shared.warmup.joints));
     warmBody.appendChild(el("div", { className: "sub-label", text: "动态拉伸" }));
-    warmBody.appendChild(
-      checklist(shared.warmup.dynamic, "dynamic", saved.checks && saved.checks.dynamic)
-    );
+    warmBody.appendChild(displayList(shared.warmup.dynamic));
     warmBody.appendChild(
       el("div", {
         className: "sub-label",
-        text: "心肺激活（按顺序" + (shared.warmup.cardioNote ? "，" + shared.warmup.cardioNote : "") + "）"
+        text:
+          "心肺激活（按顺序" +
+          (shared.warmup.cardioNote ? "，" + shared.warmup.cardioNote : "") +
+          "）"
       })
     );
-    warmBody.appendChild(
-      checklist(shared.warmup.cardio, "cardio", saved.checks && saved.checks.cardio)
-    );
+    warmBody.appendChild(displayList(shared.warmup.cardio, true));
     warm.appendChild(warmBody);
     sheet.appendChild(warm);
+
+    // 本课要点（可选，长跑等理论课使用）
+    var knowledge = (lesson.student && lesson.student.knowledge) || [];
+    if (knowledge.length) {
+      const know = el("div", { className: "section" });
+      know.appendChild(
+        el("div", { className: "section-head", text: "本课要点" })
+      );
+      const knowBody = el("div", { className: "section-body" });
+      knowBody.appendChild(displayList(knowledge, true));
+      know.appendChild(knowBody);
+      sheet.appendChild(know);
+    }
 
     // 专项
     const special = el("div", { className: "section" });
     special.appendChild(
-      el("div", { className: "section-head", text: "二、专项训练（28分钟）" })
+      el("div", {
+        className: "section-head",
+        text: "二、专项训练（" + flow.special + "分钟）"
+      })
     );
     const specialBody = el("div", { className: "section-body" });
     const masterySaved = saved.mastery || {};
@@ -150,19 +481,31 @@
       if (d.focus) {
         const mastery = el("div", { className: "mastery" });
         mastery.appendChild(el("span", { className: "label", text: "掌握情况：" }));
+        var levelClass = {
+          未掌握: "mastery-none",
+          基本掌握: "mastery-basic",
+          熟练掌握: "mastery-good"
+        };
         shared.masteryOptions.forEach(function (opt) {
-          const id = "mastery-" + idx + "-" + opt;
-          const input = el("input", {
-            type: "radio",
-            name: "mastery-" + idx,
-            id: id,
-            value: opt,
-            "data-drill": d.name
+          var selected = masterySaved[d.name] === opt;
+          var btn = el("button", {
+            type: "button",
+            className:
+              "mastery-option " +
+              (levelClass[opt] || "") +
+              (selected ? " is-selected" : ""),
+            "data-drill": d.name,
+            "data-value": opt,
+            text: opt
           });
-          if (masterySaved[d.name] === opt) input.checked = true;
-          mastery.appendChild(
-            el("label", { for: id }, [input, document.createTextNode(" " + opt)])
-          );
+          btn.addEventListener("click", function () {
+            var group = mastery.querySelectorAll(".mastery-option");
+            Array.prototype.forEach.call(group, function (b) {
+              b.classList.remove("is-selected");
+            });
+            btn.classList.add("is-selected");
+          });
+          mastery.appendChild(btn);
         });
         row.appendChild(mastery);
       }
@@ -171,24 +514,27 @@
     special.appendChild(specialBody);
     sheet.appendChild(special);
 
-    // 拉伸
+    // 拉伸：仅展示
     const stretch = el("div", { className: "section" });
     stretch.appendChild(
       el("div", {
         className: "section-head",
-        text: "三、拉伸（" + shared.stretch.duration + "分钟）"
+        text: "三、拉伸（" + flow.stretch + "分钟）"
       })
     );
     const stretchBody = el("div", { className: "section-body" });
-    stretchBody.appendChild(
-      checklist(shared.stretch.parts, "stretch", saved.checks && saved.checks.stretch)
-    );
+    stretchBody.appendChild(displayList(shared.stretch.parts));
     stretch.appendChild(stretchBody);
     sheet.appendChild(stretch);
 
     // 总结简行
     const summary = el("div", { className: "section" });
-    summary.appendChild(el("div", { className: "section-head", text: "四、总结（2分钟）" }));
+    summary.appendChild(
+      el("div", {
+        className: "section-head",
+        text: "四、总结（" + flow.summary + "分钟）"
+      })
+    );
     summary.appendChild(
       el("div", {
         className: "section-body",
@@ -218,44 +564,47 @@
   }
 
   function collectStudentForm(lesson) {
-    const checks = { joints: {}, dynamic: {}, cardio: {}, stretch: {} };
-    document.querySelectorAll('input[name="joint"]').forEach(function (i) {
-      if (i.checked) checks.joints[i.value] = true;
-    });
-    document.querySelectorAll('input[name="dynamic"]').forEach(function (i) {
-      if (i.checked) checks.dynamic[i.value] = true;
-    });
-    document.querySelectorAll('input[name="cardio"]').forEach(function (i) {
-      if (i.checked) checks.cardio[i.value] = true;
-    });
-    document.querySelectorAll('input[name="stretch"]').forEach(function (i) {
-      if (i.checked) checks.stretch[i.value] = true;
+    const mastery = {};
+    document.querySelectorAll(".mastery-option.is-selected").forEach(function (btn) {
+      var drill = btn.getAttribute("data-drill");
+      var value = btn.getAttribute("data-value");
+      if (drill && value) mastery[drill] = value;
     });
 
-    const mastery = {};
-    document.querySelectorAll('input[type="radio"][data-drill]:checked').forEach(function (r) {
-      mastery[r.getAttribute("data-drill")] = r.value;
-    });
+    var coachId = (document.getElementById("coachId") || {}).value || "";
+    var coach =
+      (window.getCoachById && window.getCoachById(coachId)) ||
+      (window.getDefaultCoach && window.getDefaultCoach());
 
     return {
       studentName: (document.getElementById("studentName") || {}).value || "",
-      classTime: (document.getElementById("classTime") || {}).value || "",
-      coachName: (document.getElementById("coachName") || {}).value || "",
-      checks: checks,
+      classDate: (document.getElementById("classDate") || {}).value || "",
+      timeStart: (document.getElementById("timeStart") || {}).value || "",
+      timeEnd: (document.getElementById("timeEnd") || {}).value || "",
+      coachId: coachId || (coach && coach.id) || "",
+      coachName: (coach && coach.name) || "",
       mastery: mastery
     };
   }
 
-  function renderCoach(lesson, shared, root) {
+  function renderCoach(lesson, shared, root, mod) {
+    mod = mod || getModuleContext();
     document.body.classList.add("role-coach");
     document.title =
-      "教练员版 · 第" + lesson.id + "课 " + lesson.title + " · 短跑入门";
+      "心雨少儿体能-体测方向 · 教练员版 · 第" +
+      lesson.id +
+      "课 " +
+      lesson.title;
 
     const c = lesson.coach;
+    const flow = getFlowMinutes(lesson, shared);
     const sheet = el("div", { className: "sheet", id: "print-area" });
 
     sheet.appendChild(
-      el("h2", { className: "sheet-title", text: "短跑入门 · 教练员教案" })
+      el("h2", {
+        className: "sheet-title",
+        text: "心雨少儿体能-体测方向 · 教练员教案"
+      })
     );
     sheet.appendChild(
       el("div", {
@@ -266,9 +615,8 @@
           "课 · " +
           lesson.title +
           " · " +
-          shared.duration +
-          "分钟 · 适用" +
-          shared.audience
+          flow.total +
+          "分钟"
       })
     );
 
@@ -305,16 +653,19 @@
     sheet.appendChild(kh);
 
     // 流程
-    const flow = el("div", { className: "section" });
-    flow.appendChild(
-      el("div", { className: "section-head coach", text: "课时流程（45分钟）" })
+    const flowSec = el("div", { className: "section" });
+    flowSec.appendChild(
+      el("div", {
+        className: "section-head coach",
+        text: "课时流程（" + flow.total + "分钟）"
+      })
     );
     const flowBody = el("div", { className: "section-body" });
     [
-      ["热身 10′", c.flow.warmup],
-      ["专项 28′", c.flow.special],
-      ["拉伸 5′", c.flow.stretch],
-      ["总结 2′", c.flow.summary]
+      ["热身 " + flow.warmup + "′", c.flow.warmup],
+      ["专项 " + flow.special + "′", c.flow.special],
+      ["拉伸 " + flow.stretch + "′", c.flow.stretch],
+      ["总结 " + flow.summary + "′", c.flow.summary]
     ].forEach(function (pair) {
       flowBody.appendChild(
         el("div", {
@@ -338,8 +689,8 @@
           shared.warmup.cardioNote
       })
     );
-    flow.appendChild(flowBody);
-    sheet.appendChild(flow);
+    flowSec.appendChild(flowBody);
+    sheet.appendChild(flowSec);
 
     // 专项教法
     const drillsSec = el("div", { className: "section" });
@@ -451,14 +802,18 @@
     const root = document.getElementById("lesson-root");
     if (!root) return;
 
+    const mod = getModuleContext();
     const id = qs("id") || "1";
     const role = (qs("role") || "student").toLowerCase();
-    const lesson = window.getSprintLesson(id);
-    const shared = window.SPRINT_SHARED;
+    const lesson = mod.getLesson ? mod.getLesson(id) : null;
+    const shared = mod.shared;
+    const storage = mod.storage || window.SprintStorage;
 
     if (!lesson) {
       root.innerHTML =
-        '<div class="panel"><p>未找到该课次。请返回 <a href="index.html">短跑总表</a>。</p></div>';
+        '<div class="panel"><p>未找到该课次。请返回 <a href="index.html">' +
+        mod.label +
+        "总表</a>。</p></div>";
       return;
     }
 
@@ -482,14 +837,44 @@
 
     let collect = null;
     if (role === "coach") {
-      renderCoach(lesson, shared, root);
+      renderCoach(lesson, shared, root, mod);
     } else {
-      collect = renderStudent(lesson, shared, root);
+      collect = renderStudent(lesson, shared, root, mod);
+    }
+
+    const hintBar = document.getElementById("hint-bar");
+    if (hintBar) {
+      hintBar.innerHTML =
+        role === "student"
+          ? '<span class="note">学员掌握情况表：先填写再点「保存记录」；「打印表格 / 保存图片」仅输出下方表格内容（不含顶部按钮）。</span>'
+          : '<span class="note">教练员教案：「打印表格 / 保存图片」仅输出下方教案内容。</span>';
     }
 
     const saveBtn = document.getElementById("btn-save");
     const clearBtn = document.getElementById("btn-clear");
     const printBtn = document.getElementById("btn-print");
+    const imageBtn = document.getElementById("btn-image");
+
+    function persistStudentIfNeeded() {
+      if (role === "student" && collect && storage) {
+        storage.save(lesson.id, collect());
+      }
+    }
+
+    function buildExportFilename() {
+      var studentName = "";
+      var nameInput = document.getElementById("studentName");
+      if (nameInput && nameInput.value) studentName = nameInput.value.trim();
+      var roleLabel = role === "coach" ? "教练教案" : "学员训练表";
+      var parts = [
+        mod.label,
+        "第" + lesson.id + "课",
+        window.ExportSheetImage.safeName(lesson.title),
+        roleLabel
+      ];
+      if (studentName) parts.push(window.ExportSheetImage.safeName(studentName));
+      return parts.join("-") + ".png";
+    }
 
     if (role !== "student") {
       if (saveBtn) saveBtn.style.display = "none";
@@ -498,14 +883,14 @@
       if (saveBtn) {
         saveBtn.addEventListener("click", function () {
           const data = collect();
-          window.SprintStorage.save(lesson.id, data);
+          storage.save(lesson.id, data);
           alert("已保存本课学员记录（本机浏览器）。");
         });
       }
       if (clearBtn) {
         clearBtn.addEventListener("click", function () {
           if (confirm("确定清空本课已保存的学员记录？")) {
-            window.SprintStorage.clear(lesson.id);
+            storage.clear(lesson.id);
             location.reload();
           }
         });
@@ -514,40 +899,68 @@
 
     if (printBtn) {
       printBtn.addEventListener("click", function () {
-        if (role === "student" && collect) {
-          window.SprintStorage.save(lesson.id, collect());
+        persistStudentIfNeeded();
+        if (window.ExportSheetImage && window.ExportSheetImage.printPrintArea) {
+          window.ExportSheetImage.printPrintArea();
+        } else {
+          window.print();
         }
-        window.print();
+      });
+    }
+
+    if (imageBtn) {
+      imageBtn.addEventListener("click", function () {
+        persistStudentIfNeeded();
+        var original = imageBtn.textContent;
+        imageBtn.disabled = true;
+        imageBtn.textContent = "生成中…";
+        window.ExportSheetImage.exportPrintArea(buildExportFilename())
+          .then(function () {
+            imageBtn.disabled = false;
+            imageBtn.textContent = original;
+          })
+          .catch(function (err) {
+            imageBtn.disabled = false;
+            imageBtn.textContent = original;
+            alert((err && err.message) || "保存图片失败");
+          });
       });
     }
   }
 
-  function initSprintIndex() {
+  function initModuleIndex() {
     const tbody = document.getElementById("lesson-tbody");
-    if (!tbody || !window.SPRINT_LESSONS) return;
+    const mod = getModuleContext();
+    if (!tbody || !mod.lessons) return;
 
-    window.SPRINT_LESSONS.forEach(function (lesson) {
+    var showDuration = mod.id === "endurance";
+
+    mod.lessons.forEach(function (lesson) {
       const tr = el("tr");
       tr.appendChild(el("td", { text: String(lesson.id) }));
       tr.appendChild(el("td", { text: lesson.title }));
+      if (showDuration) {
+        var mins = (lesson.duration || (mod.shared && mod.shared.duration) || 45) + "′";
+        tr.appendChild(el("td", { text: mins }));
+      }
       tr.appendChild(el("td", { text: lesson.focus.join("、") }));
       tr.appendChild(el("td", { text: lesson.goal }));
-      const actions = el("div", { className: "actions" });
+      const actions = el("div", { className: "actions no-print" });
       actions.appendChild(
         el("a", {
           className: "btn btn-primary",
           href: "lesson.html?id=" + lesson.id + "&role=student",
-          text: "学员版"
+          text: "学员"
         })
       );
       actions.appendChild(
         el("a", {
           className: "btn btn-coach",
           href: "lesson.html?id=" + lesson.id + "&role=coach",
-          text: "教练员版"
+          text: "教练"
         })
       );
-      tr.appendChild(el("td", null, [actions]));
+      tr.appendChild(el("td", { className: "no-print" }, [actions]));
       tbody.appendChild(tr);
     });
 
@@ -557,10 +970,41 @@
         window.print();
       });
     }
+
+    const imageBtn = document.getElementById("btn-image");
+    if (imageBtn && window.ExportSheetImage) {
+      imageBtn.addEventListener("click", function () {
+        var original = imageBtn.textContent;
+        imageBtn.disabled = true;
+        imageBtn.textContent = "生成中…";
+        var fileName =
+          mod.label + "-" + mod.lessonCount + "课时总表.png";
+        window.ExportSheetImage.exportPrintArea(fileName)
+          .then(function () {
+            imageBtn.disabled = false;
+            imageBtn.textContent = original;
+          })
+          .catch(function (err) {
+            imageBtn.disabled = false;
+            imageBtn.textContent = original;
+            alert((err && err.message) || "保存图片失败");
+          });
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     if (document.body.dataset.page === "lesson") initLessonPage();
-    if (document.body.dataset.page === "sprint-index") initSprintIndex();
+    var page = document.body.dataset.page || "";
+    if (
+      page === "module-index" ||
+      page === "sprint-index" ||
+      page === "endurance-index" ||
+      page === "jump-rope-index" ||
+      page === "fitness-index" ||
+      page === "core-index"
+    ) {
+      initModuleIndex();
+    }
   });
 })();
