@@ -175,6 +175,8 @@ a:hover {
 
 .module-card.disabled {
   opacity: 0.72;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 .badge {

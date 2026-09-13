@@ -478,7 +478,7 @@
         })
       );
 
-      if (d.focus) {
+      if (d.focus || (mod && mod.id === "jump-rope")) {
         const mastery = el("div", { className: "mastery" });
         mastery.appendChild(el("span", { className: "label", text: "掌握情况：" }));
         var levelClass = {
