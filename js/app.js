@@ -80,6 +80,12 @@
         ? fm.stretch
         : (shared && shared.stretch && shared.stretch.duration) || 5;
     var summary = fm.summary != null ? fm.summary : 2;
+    if (shared && shared.summaryDuration != null) {
+      summary = shared.summaryDuration;
+    }
+    if (window.TRAIN_MODULE && window.TRAIN_MODULE.hideSummary) {
+      summary = 0;
+    }
     var special =
       fm.special != null
         ? fm.special
@@ -462,14 +468,19 @@
     const specialBody = el("div", { className: "section-body" });
     const masterySaved = saved.mastery || {};
 
+    var hideFocus = mod && mod.hideFocus;
+    var hideMastery = mod && mod.hideMastery;
+
     lesson.student.drills.forEach(function (d, idx) {
       const row = el("div", {
-        className: "drill-row" + (d.focus ? " focus" : "")
+        className: "drill-row" + (d.focus && !hideFocus ? " focus" : "")
       });
       const nameRow = el("div", { className: "drill-name" }, [
         document.createTextNode(d.name)
       ]);
-      if (d.focus) nameRow.appendChild(el("span", { className: "tag-focus", text: "重点" }));
+      if (d.focus && !hideFocus) {
+        nameRow.appendChild(el("span", { className: "tag-focus", text: "重点" }));
+      }
       row.appendChild(nameRow);
       row.appendChild(
         el("div", {
@@ -478,7 +489,7 @@
         })
       );
 
-      if (d.focus || (mod && mod.id === "jump-rope")) {
+      if (!hideMastery && (d.focus || (mod && mod.id === "jump-rope"))) {
         const mastery = el("div", { className: "mastery" });
         mastery.appendChild(el("span", { className: "label", text: "掌握情况：" }));
         var levelClass = {
@@ -527,21 +538,22 @@
     stretch.appendChild(stretchBody);
     sheet.appendChild(stretch);
 
-    // 总结简行
-    const summary = el("div", { className: "section" });
-    summary.appendChild(
-      el("div", {
-        className: "section-head",
-        text: "四、总结（" + flow.summary + "分钟）"
-      })
-    );
-    summary.appendChild(
-      el("div", {
-        className: "section-body",
-        html: "<span class='note'>" + (lesson.student.summaryLine || "本课完成") + "</span>"
-      })
-    );
-    sheet.appendChild(summary);
+    if (flow.summary > 0 && !(mod && mod.hideSummary)) {
+      const summary = el("div", { className: "section" });
+      summary.appendChild(
+        el("div", {
+          className: "section-head",
+          text: "四、总结（" + flow.summary + "分钟）"
+        })
+      );
+      summary.appendChild(
+        el("div", {
+          className: "section-body",
+          html: "<span class='note'>" + (lesson.student.summaryLine || "本课完成") + "</span>"
+        })
+      );
+      sheet.appendChild(summary);
+    }
 
     // 签字
     const signs = el("div", { className: "sign-row" });
@@ -661,12 +673,15 @@
       })
     );
     const flowBody = el("div", { className: "section-body" });
-    [
+    var flowPairs = [
       ["热身 " + flow.warmup + "′", c.flow.warmup],
       ["专项 " + flow.special + "′", c.flow.special],
-      ["拉伸 " + flow.stretch + "′", c.flow.stretch],
-      ["总结 " + flow.summary + "′", c.flow.summary]
-    ].forEach(function (pair) {
+      ["拉伸 " + flow.stretch + "′", c.flow.stretch]
+    ];
+    if (flow.summary > 0 && !(mod && mod.hideSummary) && c.flow.summary) {
+      flowPairs.push(["总结 " + flow.summary + "′", c.flow.summary]);
+    }
+    flowPairs.forEach(function (pair) {
       flowBody.appendChild(
         el("div", {
           className: "coach-block",
@@ -699,14 +714,18 @@
     );
     const drillsBody = el("div", { className: "section-body" });
 
+    var hideFocus = mod && mod.hideFocus;
+
     c.drills.forEach(function (d) {
       const block = el("div", {
-        className: "drill-row" + (d.focus ? " focus" : "")
+        className: "drill-row" + (d.focus && !hideFocus ? " focus" : "")
       });
       const title = el("div", { className: "drill-name" }, [
         document.createTextNode(d.name)
       ]);
-      if (d.focus) title.appendChild(el("span", { className: "tag-focus", text: "重点" }));
+      if (d.focus && !hideFocus) {
+        title.appendChild(el("span", { className: "tag-focus", text: "重点" }));
+      }
       block.appendChild(title);
 
       block.appendChild(el("div", { className: "sub-label", text: "核心技术点" }));
@@ -846,7 +865,9 @@
     if (hintBar) {
       hintBar.innerHTML =
         role === "student"
-          ? '<span class="note">学员掌握情况表：先填写再点「保存记录」；「打印表格 / 保存图片」仅输出下方表格内容（不含顶部按钮）。</span>'
+          ? mod.hideMastery
+            ? '<span class="note">学员训练表：可填写姓名与日期后点「保存记录」；「打印表格 / 保存图片」仅输出下方表格内容（不含顶部按钮）。</span>'
+            : '<span class="note">学员掌握情况表：先填写再点「保存记录」；「打印表格 / 保存图片」仅输出下方表格内容（不含顶部按钮）。</span>'
           : '<span class="note">教练员教案：「打印表格 / 保存图片」仅输出下方教案内容。</span>';
     }
 
@@ -937,7 +958,7 @@
 
     mod.lessons.forEach(function (lesson) {
       const tr = el("tr");
-      tr.appendChild(el("td", { text: String(lesson.id) }));
+      tr.appendChild(el("td", { text: String(lesson.indexLabel || lesson.id) }));
       tr.appendChild(el("td", { text: lesson.title }));
       if (showDuration) {
         var mins = (lesson.duration || (mod.shared && mod.shared.duration) || 45) + "′";
