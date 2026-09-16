@@ -604,6 +604,7 @@ window.TRAIN_MODULE = {
   name: "跳绳",
   lessonCount: 2,
   hideFocus: true,
+  masteryScope: "all",
   shared: window.JUMP_ROPE_SHARED,
   lessons: window.JUMP_ROPE_LESSONS,
   getLesson: window.getJumpRopeLesson

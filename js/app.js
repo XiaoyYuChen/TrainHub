@@ -1,6 +1,6 @@
 /**
  * 训练模块单课页渲染：role=student | coach
- * 通过 TRAIN_MODULE / 各模块 data.js 适配短跑、长跑等
+ * 只读 window.TRAIN_MODULE（由 data/{id}/data.js 提供），不要在此写死专项 id
  */
 (function () {
   function qs(name) {
@@ -10,69 +10,47 @@
 
   function getModuleContext() {
     var mod = window.TRAIN_MODULE || {};
-    var id = mod.id || "sprint";
-    var label = mod.label || mod.name || "短跑";
+    var id = mod.id || "";
+    var label = mod.label || mod.name || id || "专项";
     var shared = mod.shared;
-    var lessons = mod.lessons;
+    var lessons = mod.lessons || [];
     var getLesson = mod.getLesson;
     var storage = mod.storage;
-    var lessonCount = mod.lessonCount;
 
-    // 兼容只声明 id/label 的模块（如长跑早期写法）
-    if (!shared || !lessons) {
-      if (id === "endurance") {
-        shared = shared || window.ENDURANCE_SHARED;
-        lessons = lessons || window.ENDURANCE_LESSONS;
-        getLesson = getLesson || window.getEnduranceLesson;
-        storage = storage || window.EnduranceStorage;
-      } else if (id === "jump-rope") {
-        shared = shared || window.JUMP_ROPE_SHARED;
-        lessons = lessons || window.JUMP_ROPE_LESSONS;
-        getLesson = getLesson || window.getJumpRopeLesson;
-        storage = storage || window.JumpRopeStorage;
-      } else if (id === "fitness") {
-        shared = shared || window.FITNESS_SHARED;
-        lessons = lessons || window.FITNESS_LESSONS;
-        getLesson = getLesson || window.getFitnessLesson;
-        storage = storage || window.FitnessStorage;
-      } else if (id === "core") {
-        shared = shared || window.CORE_SHARED;
-        lessons = lessons || window.CORE_LESSONS;
-        getLesson = getLesson || window.getCoreLesson;
-        storage = storage || window.CoreStorage;
-      } else if (id === "coordination") {
-        shared = shared || window.COORDINATION_SHARED;
-        lessons = lessons || window.COORDINATION_LESSONS;
-        getLesson = getLesson || window.getCoordinationLesson;
-        storage = storage || window.CoordinationStorage;
-      } else {
-        shared = shared || window.SPRINT_SHARED;
-        lessons = lessons || window.SPRINT_LESSONS;
-        getLesson = getLesson || window.getSprintLesson;
-        storage = storage || window.SprintStorage;
-        id = "sprint";
-        label = label || "短跑";
-      }
+    if (!getLesson) {
+      getLesson = function (lessonId) {
+        var n = Number(lessonId);
+        for (var i = 0; i < lessons.length; i++) {
+          if (lessons[i].id === n) return lessons[i];
+        }
+        return null;
+      };
     }
 
-    if (!storage && window.createLessonStorage) {
+    if (!storage && window.getModuleStorage && id) {
+      storage = window.getModuleStorage(id);
+    } else if (!storage && window.createLessonStorage && id) {
       storage = window.createLessonStorage(id + "-lesson-");
     }
-    if (!storage) {
-      storage = window.SprintStorage;
+
+    var masteryScope = mod.masteryScope;
+    if (!masteryScope) {
+      masteryScope = mod.hideMastery ? "none" : "focus";
     }
 
     return {
       id: id,
       label: label,
-      lessonCount: lessonCount || (lessons && lessons.length) || 12,
+      lessonCount: mod.lessonCount || lessons.length || 0,
       shared: shared,
       lessons: lessons,
       getLesson: getLesson,
       storage: storage,
       hideFocus: !!mod.hideFocus,
-      hideMastery: !!mod.hideMastery,
-      hideSummary: !!mod.hideSummary
+      hideMastery: masteryScope === "none" || !!mod.hideMastery,
+      hideSummary: !!mod.hideSummary,
+      showDuration: !!mod.showDuration,
+      masteryScope: masteryScope
     };
   }
 
@@ -241,7 +219,7 @@
       "课 " +
       lesson.title;
 
-    const storage = mod.storage || window.SprintStorage;
+    const storage = mod.storage;
     const saved = (storage && storage.load(lesson.id)) || {};
     const cfg = getConfig();
     const flow = getFlowMinutes(lesson, shared);
@@ -478,6 +456,7 @@
 
     var hideFocus = mod && mod.hideFocus;
     var hideMastery = mod && mod.hideMastery;
+    var masteryScope = (mod && mod.masteryScope) || (hideMastery ? "none" : "focus");
 
     lesson.student.drills.forEach(function (d, idx) {
       const row = el("div", {
@@ -498,9 +477,8 @@
       );
 
       if (
-        !hideMastery &&
-        (d.focus ||
-          (mod && (mod.id === "jump-rope" || mod.id === "coordination")))
+        masteryScope !== "none" &&
+        (masteryScope === "all" || d.focus)
       ) {
         const mastery = el("div", { className: "mastery" });
         mastery.appendChild(el("span", { className: "label", text: "掌握情况：" }));
@@ -838,7 +816,7 @@
     const role = (qs("role") || "student").toLowerCase();
     const lesson = mod.getLesson ? mod.getLesson(id) : null;
     const shared = mod.shared;
-    const storage = mod.storage || window.SprintStorage;
+    const storage = mod.storage;
 
     if (!lesson) {
       root.innerHTML =
@@ -966,7 +944,7 @@
     const mod = getModuleContext();
     if (!tbody || !mod.lessons) return;
 
-    var showDuration = mod.id === "endurance";
+    var showDuration = !!(mod && mod.showDuration);
 
     mod.lessons.forEach(function (lesson) {
       const tr = el("tr");
@@ -1032,17 +1010,6 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     if (document.body.dataset.page === "lesson") initLessonPage();
-    var page = document.body.dataset.page || "";
-    if (
-      page === "module-index" ||
-      page === "sprint-index" ||
-      page === "endurance-index" ||
-      page === "jump-rope-index" ||
-      page === "fitness-index" ||
-      page === "core-index" ||
-      page === "coordination-index"
-    ) {
-      initModuleIndex();
-    }
+    if (document.getElementById("lesson-tbody")) initModuleIndex();
   });
 })();

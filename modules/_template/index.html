@@ -3,14 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>心雨少儿体能-体测方向 · 长跑总表</title>
+    <title>心雨少儿体能-体测方向 · 示例专项总表</title>
     <link rel="stylesheet" href="../../css/app.css?v=14" />
   </head>
-  <body data-page="endurance-index">
+  <!--
+    复制本文件夹为 modules/{id}/
+    把下面的 data/_template 改成 data/{id}
+    并在 data/catalog.js 登记
+  -->
+  <body data-page="module-index">
     <header class="app-header">
       <div>
-        <h1>心雨少儿体能-体测方向 · 长跑总表</h1>
-        <div class="sub">3课时（原15课整合）· 适用 2–6年级 · 单课 90分钟</div>
+        <h1>心雨少儿体能-体测方向 · 示例专项总表</h1>
+        <div class="sub">复制本页即可扩展新的专项训练模块</div>
       </div>
       <div class="nav-links no-print">
         <a class="btn" href="../../index.html">返回首页</a>
@@ -22,8 +27,8 @@
     <main class="container">
       <div class="panel no-print">
         <p class="note" style="margin: 0">
-          含长跑与短跑区别、呼吸节奏、小学体测<strong>50米×8往返跑</strong>（转弯与体力分配）、3–5公里持续跑。
-          单课 <strong>90 分钟</strong>。每课分<strong>学员版</strong>与<strong>教练员版</strong>。打印 / 保存图片仅输出下方总表内容。
+          这是给贡献者用的空壳示例。每课分<strong>学员版</strong>与<strong>教练员版</strong>。
+          打印 / 保存图片仅输出下方总表。扩展步骤见仓库根目录 <code>AGENTS.md</code>。
         </p>
       </div>
 
@@ -33,7 +38,6 @@
             <tr>
               <th style="width: 4em">课次</th>
               <th>主题</th>
-              <th style="width: 4em">时长</th>
               <th>重点动作</th>
               <th>目标</th>
               <th class="no-print" style="width: 15em; white-space: nowrap">进入</th>
@@ -44,7 +48,7 @@
       </div>
     </main>
 
-    <script src="../../data/endurance/data.js?v=2"></script>
+    <script src="../../data/_template/data.js"></script>
     <script src="../../js/export-image.js?v=8"></script>
     <script src="../../js/app.js?v=19"></script>
   </body>

@@ -684,6 +684,7 @@ window.TRAIN_MODULE = {
   label: "长跑",
   name: "长跑",
   lessonCount: 3,
+  showDuration: true,
   shared: window.ENDURANCE_SHARED,
   lessons: window.ENDURANCE_LESSONS,
   getLesson: window.getEnduranceLesson

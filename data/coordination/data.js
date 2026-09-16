@@ -316,6 +316,7 @@ window.TRAIN_MODULE = {
   name: "协调性",
   lessonCount: 1,
   hideFocus: true,
+  masteryScope: "all",
   shared: window.COORDINATION_SHARED,
   lessons: window.COORDINATION_LESSONS,
   getLesson: window.getCoordinationLesson
