@@ -31,7 +31,7 @@ window.JUMP_ROPE_LESSONS = [
       drills: [
         {
           name: "绳长",
-          focus: true,
+          focus: false,
           dose: "个人量绳 1 次 + 同伴互检 1 次；定长标记",
           rest: "排队有序，约 20 秒轮换"
         },
@@ -61,7 +61,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "双手摇绳",
-          focus: true,
+          focus: false,
           dose: "3–4 组 × 20–30 次（不跳，匀速摇空绳）",
           rest: "组间 30–40 秒"
         },
@@ -79,13 +79,13 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "摇跳分解",
-          focus: true,
+          focus: false,
           dose: "3 组 × 8–10 次（先摇到脚前再跳）",
           rest: "组间 40 秒"
         },
         {
           name: "连续跳",
-          focus: true,
+          focus: false,
           dose: "5 组 × 尝试连续 5–15 次",
           rest: "组间 45–60 秒"
         }
@@ -113,7 +113,7 @@ window.JUMP_ROPE_LESSONS = [
       drills: [
         {
           name: "绳长",
-          focus: true,
+          focus: false,
           core: [
             "双脚踩住绳中段，双手沿体侧上提至约腋下高度（小学简化量法）",
             "过短易绊脚，过长易拖地乱绳；定长后做标记",
@@ -200,7 +200,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "双手摇绳",
-          focus: true,
+          focus: false,
           core: [
             "双肘靠近身体两侧，主要用手腕画小圆",
             "绳由后向前摇，过脚前略加速，匀速「哒—哒」",
@@ -267,7 +267,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "摇跳分解",
-          focus: true,
+          focus: false,
           core: [
             "预备：绳在身后，姿势正确",
             "先摇：腕向前摇，绳至脚尖前方",
@@ -295,7 +295,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "连续跳",
-          focus: true,
+          focus: false,
           core: [
             "摇跳衔接连续：过绳后不停顿进入下一次摇",
             "保持轻跳低跳，呼吸自然",
@@ -335,13 +335,13 @@ window.JUMP_ROPE_LESSONS = [
       drills: [
         {
           name: "连续跳",
-          focus: true,
+          focus: false,
           dose: "4 组 × 冲击个人连续次数（如 20–50 次）",
           rest: "组间 50–60 秒"
         },
         {
           name: "1分钟跳绳",
-          focus: true,
+          focus: false,
           dose: "完整计时 1–2 次；可穿插 30 秒分段 1 次",
           rest: "次间 2–3 分钟"
         },
@@ -371,13 +371,13 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "双摇",
-          focus: true,
+          focus: false,
           dose: "分解与尝试 4–5 组 × 若干次（能成 1–3 次即可）",
           rest: "组间 45–60 秒"
         },
         {
           name: "花式",
-          focus: true,
+          focus: false,
           dose: "选学 1–2 种简易花式（如交叉臂预备、前后摆跳）各 2–3 组体验",
           rest: "组间 40–50 秒"
         }
@@ -405,7 +405,7 @@ window.JUMP_ROPE_LESSONS = [
       drills: [
         {
           name: "连续跳",
-          focus: true,
+          focus: false,
           core: [
             "在初级基础上提高连续次数与稳定性",
             "保持腕摇小圈、轻跳低跳",
@@ -427,7 +427,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "1分钟跳绳",
-          focus: true,
+          focus: false,
           core: [
             "前 20 秒找节奏，中段匀速，最后不盲目猛加速至失控",
             "失误后尽快重启，继续计时",
@@ -534,7 +534,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "双摇",
-          focus: true,
+          focus: false,
           core: [
             "一次起跳，绳快速摇过两圈（入门目标：能做出加速摇与稍高弹跳配合）",
             "先练「高跳一次 + 快速空摇两圈」分解，再尝试过脚",
@@ -561,7 +561,7 @@ window.JUMP_ROPE_LESSONS = [
         },
         {
           name: "花式",
-          focus: true,
+          focus: false,
           core: [
             "选学简易内容：如交叉臂摆绳预备、前后摆跳、或侧摆跳等 1–2 种",
             "先无绳或慢摇体会路线，再低速尝试",
@@ -604,6 +604,7 @@ window.TRAIN_MODULE = {
   label: "跳绳",
   name: "跳绳",
   lessonCount: 2,
+  hideFocus: true,
   shared: window.JUMP_ROPE_SHARED,
   lessons: window.JUMP_ROPE_LESSONS,
   getLesson: window.getJumpRopeLesson
