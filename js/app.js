@@ -40,6 +40,11 @@
         lessons = lessons || window.CORE_LESSONS;
         getLesson = getLesson || window.getCoreLesson;
         storage = storage || window.CoreStorage;
+      } else if (id === "coordination") {
+        shared = shared || window.COORDINATION_SHARED;
+        lessons = lessons || window.COORDINATION_LESSONS;
+        getLesson = getLesson || window.getCoordinationLesson;
+        storage = storage || window.CoordinationStorage;
       } else {
         shared = shared || window.SPRINT_SHARED;
         lessons = lessons || window.SPRINT_LESSONS;
@@ -64,7 +69,10 @@
       shared: shared,
       lessons: lessons,
       getLesson: getLesson,
-      storage: storage
+      storage: storage,
+      hideFocus: !!mod.hideFocus,
+      hideMastery: !!mod.hideMastery,
+      hideSummary: !!mod.hideSummary
     };
   }
 
@@ -489,7 +497,11 @@
         })
       );
 
-      if (!hideMastery && (d.focus || (mod && mod.id === "jump-rope"))) {
+      if (
+        !hideMastery &&
+        (d.focus ||
+          (mod && (mod.id === "jump-rope" || mod.id === "coordination")))
+      ) {
         const mastery = el("div", { className: "mastery" });
         mastery.appendChild(el("span", { className: "label", text: "掌握情况：" }));
         var levelClass = {
@@ -1023,7 +1035,8 @@
       page === "endurance-index" ||
       page === "jump-rope-index" ||
       page === "fitness-index" ||
-      page === "core-index"
+      page === "core-index" ||
+      page === "coordination-index"
     ) {
       initModuleIndex();
     }

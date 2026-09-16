@@ -35,4 +35,5 @@
   window.JumpRopeStorage = createLessonStorage("jump-rope-lesson-");
   window.FitnessStorage = createLessonStorage("fitness-lesson-");
   window.CoreStorage = createLessonStorage("core-lesson-");
+  window.CoordinationStorage = createLessonStorage("coordination-lesson-");
 })();

@@ -1,6 +1,6 @@
 # TrainHub
 
-心雨少儿体能-体测方向 · 训练中心（短跑、中长跑、跳绳、体能、核心等）
+心雨少儿体能-体测方向 · 训练中心（短跑、中长跑、跳绳、体能、核心、协调性等）
 
 ## 在线预览（GitHub Pages）
 
@@ -10,6 +10,7 @@
 - 跳绳总表：https://xiaoyyuchen.github.io/TrainHub/modules/jump-rope/
 - 体能总表：https://xiaoyyuchen.github.io/TrainHub/modules/fitness/
 - 核心力量总表：https://xiaoyyuchen.github.io/TrainHub/modules/core/
+- 协调性总表：https://xiaoyyuchen.github.io/TrainHub/modules/coordination/
 
 仓库地址：https://github.com/XiaoyYuChen/TrainHub
 
