@@ -20,7 +20,7 @@ window.SITE_CONFIG = {
   defaultCoachId: "chen",
 
   /** 学员备选名称 —— 后续后台可增删改 */
-  studentOptions: ["多多", "朗朗", "莹莹", "可心", "双双", "齐齐"],
+  studentOptions: ["多多", "朗朗", "莹莹", "可心", "双双", "齐齐", "雯雯", "一一", "瓜瓜", "果果"],
 
   /** 指导教练（含二维码）—— 后续后台可维护 */
   coaches: [

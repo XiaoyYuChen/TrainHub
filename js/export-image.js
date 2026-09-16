@@ -1,11 +1,13 @@
 /**
  * 仅导出 #print-area 表格区域为 PNG
- * 按页面自然版式截图（与屏幕所见一致），二维码手动画入并复位 transform
+ * 打印 / 生成图片一律按 A4 纸宽排版（手机、平板不沿用窄屏叠排）
  */
 window.ExportSheetImage = (function () {
   var HTML2CANVAS_SRC =
     "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
   var EXPORT_SCALE = 2;
+  var A4_WIDTH_PX = 794;
+  var VIEWPORT_A4 = "width=794, initial-scale=1";
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
@@ -212,6 +214,79 @@ window.ExportSheetImage = (function () {
     return restored;
   }
 
+  function waitLayout() {
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          setTimeout(resolve, 80);
+        });
+      });
+    });
+  }
+
+  function showExportMask(text) {
+    var existing = document.querySelector(".a4-export-mask");
+    if (existing) {
+      existing.textContent = text || "正在按 A4 版式处理…";
+      return existing;
+    }
+    var mask = document.createElement("div");
+    mask.className = "a4-export-mask no-print";
+    mask.setAttribute("aria-live", "polite");
+    mask.textContent = text || "正在按 A4 版式处理…";
+    document.body.appendChild(mask);
+    return mask;
+  }
+
+  function hideExportMask() {
+    var mask = document.querySelector(".a4-export-mask");
+    if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
+  }
+
+  function applyA4Layout(target) {
+    var html = document.documentElement;
+    var meta = document.querySelector('meta[name="viewport"]');
+    var state = {
+      html: html,
+      meta: meta,
+      prevMeta: meta ? meta.getAttribute("content") : "",
+      prevHtmlWidth: html.style.width,
+      prevBodyWidth: document.body.style.width,
+      prevTargetWidth: target ? target.style.width : "",
+      prevTargetMax: target ? target.style.maxWidth : "",
+      prevTargetMin: target ? target.style.minWidth : "",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY
+    };
+    html.classList.add("a4-layout");
+    html.style.width = A4_WIDTH_PX + "px";
+    document.body.style.width = A4_WIDTH_PX + "px";
+    if (meta) meta.setAttribute("content", VIEWPORT_A4);
+    if (target) {
+      target.style.width = A4_WIDTH_PX + "px";
+      target.style.maxWidth = A4_WIDTH_PX + "px";
+      target.style.minWidth = A4_WIDTH_PX + "px";
+    }
+    return state;
+  }
+
+  function restoreA4Layout(state) {
+    if (!state) return;
+    state.html.classList.remove("a4-layout");
+    state.html.style.width = state.prevHtmlWidth || "";
+    document.body.style.width = state.prevBodyWidth || "";
+    if (state.meta) state.meta.setAttribute("content", state.prevMeta || "");
+    var target = document.getElementById("print-area");
+    if (target) {
+      target.style.width = state.prevTargetWidth || "";
+      target.style.maxWidth = state.prevTargetMax || "";
+      target.style.minWidth = state.prevTargetMin || "";
+    }
+    if (typeof state.scrollX === "number" && typeof state.scrollY === "number") {
+      window.scrollTo(state.scrollX, state.scrollY);
+    }
+  }
+
   function restoreSheet(restored) {
     (restored || []).forEach(function (item) {
       if (item.span && item.span.parentNode) {
@@ -272,6 +347,8 @@ window.ExportSheetImage = (function () {
     }
 
     return loadScript(HTML2CANVAS_SRC).then(function () {
+      showExportMask("正在按 A4 纸宽生成图片…");
+      var a4State = applyA4Layout(target);
       var hidden = [];
       target.querySelectorAll(".no-print").forEach(function (node) {
         hidden.push({ node: node, display: node.style.display });
@@ -288,18 +365,17 @@ window.ExportSheetImage = (function () {
         hidden.forEach(function (item) {
           item.node.style.display = item.display;
         });
+        restoreA4Layout(a4State);
+        hideExportMask();
       }
 
       return ensureQrDataUrls(target)
         .then(function () {
-          return new Promise(function (r) {
-            requestAnimationFrame(function () {
-              setTimeout(r, 50);
-            });
-          });
+          return waitLayout();
         })
         .then(function () {
           qrTargets = collectQrTargets(target);
+          var captureWidth = Math.max(A4_WIDTH_PX, Math.ceil(target.scrollWidth));
           return window.html2canvas(target, {
             scale: EXPORT_SCALE,
             backgroundColor: "#ffffff",
@@ -307,10 +383,16 @@ window.ExportSheetImage = (function () {
             allowTaint: false,
             logging: false,
             imageTimeout: 15000,
+            width: captureWidth,
+            windowWidth: captureWidth,
             scrollX: -window.scrollX,
             scrollY: -window.scrollY,
             onclone: function (doc) {
+              doc.documentElement.classList.add("a4-layout");
               var cloneRoot = doc.getElementById("print-area") || doc.body;
+              cloneRoot.style.width = A4_WIDTH_PX + "px";
+              cloneRoot.style.maxWidth = A4_WIDTH_PX + "px";
+              cloneRoot.style.minWidth = A4_WIDTH_PX + "px";
               var map = window.COACH_QR_DATA_URLS || {};
               cloneRoot.querySelectorAll("img.coach-qr-img").forEach(function (img) {
                 var id = img.getAttribute("data-coach-id") || "";
@@ -352,21 +434,37 @@ window.ExportSheetImage = (function () {
       window.print();
       return Promise.resolve();
     }
+    showExportMask("正在按 A4 纸宽准备打印…");
+    var a4State = applyA4Layout(target);
     target.classList.add("exporting-image");
     var restored = prepareSheet(target);
-    return ensureQrDataUrls(target).then(function () {
-      var cleaned = false;
-      var cleanup = function () {
-        if (cleaned) return;
-        cleaned = true;
+    return ensureQrDataUrls(target)
+      .then(function () {
+        return waitLayout();
+      })
+      .then(function () {
+        var cleaned = false;
+        var cleanup = function () {
+          if (cleaned) return;
+          cleaned = true;
+          target.classList.remove("exporting-image");
+          restoreSheet(restored);
+          restoreA4Layout(a4State);
+          hideExportMask();
+          window.removeEventListener("afterprint", cleanup);
+        };
+        window.addEventListener("afterprint", cleanup);
+        setTimeout(cleanup, 60000);
+        hideExportMask();
+        window.print();
+      })
+      .catch(function (err) {
         target.classList.remove("exporting-image");
         restoreSheet(restored);
-        window.removeEventListener("afterprint", cleanup);
-      };
-      window.addEventListener("afterprint", cleanup);
-      setTimeout(cleanup, 60000);
-      window.print();
-    });
+        restoreA4Layout(a4State);
+        hideExportMask();
+        throw err;
+      });
   }
 
   return {

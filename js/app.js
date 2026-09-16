@@ -1000,7 +1000,11 @@
     const printBtn = document.getElementById("btn-print");
     if (printBtn) {
       printBtn.addEventListener("click", function () {
-        window.print();
+        if (window.ExportSheetImage && window.ExportSheetImage.printPrintArea) {
+          window.ExportSheetImage.printPrintArea();
+        } else {
+          window.print();
+        }
       });
     }
 

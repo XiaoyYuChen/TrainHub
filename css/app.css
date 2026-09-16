@@ -837,36 +837,104 @@ ul.plain li {
 }
 
 @media screen and (max-width: 720px) {
-  .module-grid {
+  html:not(.a4-layout) .module-grid {
     grid-template-columns: 1fr;
   }
 
-  .meta-grid,
-  .meta-grid.time-range,
-  .sign-row {
+  html:not(.a4-layout) .meta-grid,
+  html:not(.a4-layout) .meta-grid.time-range,
+  html:not(.a4-layout) .sign-row {
     grid-template-columns: 1fr;
   }
 
-  .sheet-header-row {
+  html:not(.a4-layout) .sheet-header-row {
     flex-direction: column;
   }
 
-  .sheet-header-right {
+  html:not(.a4-layout) .sheet-header-right {
     width: 100%;
   }
 
-  .datetime-stack {
+  html:not(.a4-layout) .datetime-stack {
     flex-direction: column;
   }
 
-  .header-qr img,
-  .header-qr.donate img {
+  html:not(.a4-layout) .header-qr img,
+  html:not(.a4-layout) .header-qr.donate img {
     width: 72px;
     height: 72px;
   }
 }
 
-/* ===== 导出图片：保持屏幕自然版式，仅去掉交互控件观感 ===== */
+/* 打印 / 保存图片时强制 A4 纸宽（手机、平板也走桌面排版） */
+.a4-export-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(255, 255, 255, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  pointer-events: all;
+}
+
+html.a4-layout,
+html.a4-layout body,
+html.a4-layout main,
+html.a4-layout .container,
+html.a4-layout .table-wrap {
+  overflow: visible !important;
+  max-width: none !important;
+}
+
+html.a4-layout .container {
+  width: 794px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+}
+
+html.a4-layout #print-area {
+  width: 794px !important;
+  max-width: 794px !important;
+  min-width: 794px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+html.a4-layout .meta-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+html.a4-layout .meta-grid.time-range {
+  grid-template-columns: 1fr !important;
+}
+
+html.a4-layout .sign-row {
+  grid-template-columns: 1fr 1fr !important;
+}
+
+html.a4-layout .sheet-header-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+}
+
+html.a4-layout .sheet-header-right {
+  width: auto !important;
+  max-width: 240px;
+}
+
+html.a4-layout .datetime-stack {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-end !important;
+}
+
+/* ===== 导出图片：A4 纸宽版式，仅去掉交互控件观感 ===== */
 .exporting-image {
   box-shadow: none !important;
   background: #fff !important;
@@ -942,11 +1010,20 @@ ul.plain li {
   }
 
   html,
-  body {
+  body,
+  html.a4-layout,
+  html.a4-layout body {
     background: #fff !important;
     color: #000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+  }
+
+  .a4-export-mask {
+    display: none !important;
   }
 
   .no-print,
@@ -959,8 +1036,10 @@ ul.plain li {
     display: none !important;
   }
 
-  .container {
+  .container,
+  html.a4-layout .container {
     max-width: none !important;
+    width: auto !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -970,12 +1049,14 @@ ul.plain li {
     display: none !important;
   }
 
-  #print-area {
+  #print-area,
+  html.a4-layout #print-area {
     display: block !important;
     position: static !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
+    width: 186mm !important;
+    max-width: 186mm !important;
+    min-width: 186mm !important;
+    margin: 0 auto !important;
     padding: 0 !important;
     border: none !important;
     background: #fff !important;
